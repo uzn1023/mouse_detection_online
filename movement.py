@@ -4,7 +4,6 @@ import csv
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import tqdm
 import copy
 
 MORPHOVAL = 5
@@ -44,9 +43,9 @@ def proc(frame_old,frame):
         # 差分領域からケーブル領域と重なっている部分を除去
         # f_xor[(f1_cable != 0) | (f2_cable != 0)] = 0
         dif_out = cv2.countNonZero(f_xor)
-        f2[f2_mouse != 0] = f2[f2_mouse != 0]/2 + [127, 0, 0]
-        f2[f2_cable != 0] = f2[f2_cable != 0]/2 + [0, 0, 127]
-        f2[f_xor != 0]    = f2[f_xor    != 0]/2 + [0, 127, 0]
+        f2[f2_mouse != 0] = f2[f2_mouse != 0] * 3/4 + [63, 0, 0]
+        f2[f2_cable != 0] = f2[f2_cable != 0] * 3/4 + [0, 0, 63]
+        f2[f_xor != 0]    = f2[f_xor    != 0] * 3/4 + [0, 63, 0]
         return f2, dif_out
 
     f1_mouse, f1_cable = mousedetect(f1)

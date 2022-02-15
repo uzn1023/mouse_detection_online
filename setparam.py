@@ -10,6 +10,8 @@ import movement
 def setparam():
     param = []
     cameras = []
+    mouse_low = [0,0,0]
+    mouse_high = [0,0,0]
     for i1 in range(0, 20): 
         cap1 = cv2.VideoCapture( i1, cv2.CAP_DSHOW )
         if cap1.isOpened(): 
@@ -28,9 +30,26 @@ def setparam():
     cmb_cmr = sg.Combo(cameras, default_value=cameras[0],size=(10, 1), readonly=True, key="cmr_select")
     txt_ald = sg.Text('Selected Arduino',size=(15,1))
     cmb_ald = sg.Combo(devices, default_value=devices[0],size=(10, 1), readonly=True, key="ald_select")
+    txt_H = sg.Text('Mouse color range',size=(15,1))
+    txt_Hmin = sg.Text('H min',size=(5,1))
+    sld_Hmin = sg.Slider(range=(0, 255),size=(20, 10), orientation='h', key='-Hmin-', default_value = 0)
+    txt_Hmax = sg.Text('H max',size=(5,1))
+    sld_Hmax = sg.Slider(range=(0, 255),size=(20, 10), orientation='h', key='-Hmax-', default_value = 255)
+    txt_Smin = sg.Text('S min',size=(5,1))
+    sld_Smin = sg.Slider(range=(0, 255),size=(20, 10), orientation='h', key='-Smin-', default_value = 0)
+    txt_Smax = sg.Text('S max',size=(5,1))
+    sld_Smax = sg.Slider(range=(0, 255),size=(20, 10), orientation='h', key='-Smax-', default_value = 255)
+    txt_Vmin = sg.Text('V min',size=(5,1))
+    sld_Vmin = sg.Slider(range=(0, 255),size=(20, 10), orientation='h', key='-Vmin-', default_value = 0)
+    txt_Vmax = sg.Text('V max',size=(5,1))
+    sld_Vmax = sg.Slider(range=(0, 255),size=(20, 10), orientation='h', key='-Vmax-', default_value = 30)
     column = [txt_cmr, cmb_cmr],\
-             [txt_ald, cmb_ald]
-    layout = [[sg.Column(column), sg.Image(filename='', key='frame'), sg.Image(filename='', key='image')],[sg.Button('Done', size=(10, 1), font='Helvetica 14')]]
+             [txt_ald, cmb_ald],\
+             [txt_H],\
+             [txt_Hmin, sld_Hmin, txt_Hmax, sld_Hmax],\
+             [txt_Smin, sld_Smin, txt_Smax, sld_Smax],\
+             [txt_Vmin, sld_Vmin, txt_Vmax, sld_Vmax]
+    layout = [[sg.Column(column)], [sg.Image(filename='', key='frame'), sg.Image(filename='', key='image')],[sg.Button('Done', size=(10, 1), font='Helvetica 14')]]
     window = sg.Window('SelectDevices', layout, no_titlebar=False, location=(0, 0), resizable=True)
     CAMERA = cameras[0]
     capture = cv2.VideoCapture(CAMERA)
@@ -49,10 +68,13 @@ def setparam():
             CAMERA = int(values["cmr_select"])
             capture = cv2.VideoCapture(CAMERA)
         ret, frame = capture.read()
-        framebytes = cv2.imencode('.png', frame)[1].tobytes()
+        f = copy.copy(frame)
+        f = cv2.resize(f, dsize=None, fx=0.5, fy=0.5)
+        framebytes = cv2.imencode('.png', f)[1].tobytes()
         window['frame'].update(data=framebytes)
         if values["ald_select"] != "None":
             if DEVICE != values["ald_select"]:
+                ser.close()
                 DEVICE = str(values["ald_select"])
                 ser.port = DEVICE
                 ser.bandrate = 9600
@@ -68,18 +90,32 @@ def setparam():
         if frame_old is None:   # 一番最初に取得したフレームをframe_oldとして保存
             frame_old = copy.copy(frame)
         else:
+            mouse_low = [values["-Hmin-"],values["-Smin-"],values["-Vmin-"]]
+            mouse_high = [values["-Hmax-"],values["-Smax-"],values["-Vmax-"]]
             # 2回目以降はframe, frame_oldの２つを処理プログラムに投げる
-            f_out, dif_out = movement.proc(frame_old, frame)
+            f_out, dif_out = movement.proc(frame_old, frame, mouse_low, mouse_high)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
             frame_old = copy.copy(frame)
-            imagebytes = cv2.imencode('.png', f_out)[1].tobytes()
+            f_o = copy.copy(f_out)
+            f_o = cv2.resize(f_o, dsize=None, fx=0.5, fy=0.5)
+            imagebytes = cv2.imencode('.png', f_o)[1].tobytes()
             window['image'].update(data=imagebytes)
+        # 最小値が最大値を超えないようにする
+        if values["-Hmin-"] > values["-Hmax-"]:
+            window["-Hmax-"].update(values["-Hmin-"])
+        if values["-Smin-"] > values["-Smax-"]:
+            window["-Smax-"].update(values["-Smin-"])
+        if values["-Vmin-"] > values["-Vmax-"]:
+            window["-Vmax-"].update(values["-Vmin-"])
+        # Done > 次の画面に遷移
         if event in ('Done', None):
             param.append(CAMERA)
             print("Selected camera: " + str(CAMERA))
             param.append(DEVICE)
             print("Selected Arduino: " + str(DEVICE))
+            param.append(mouse_low)
+            param.append(mouse_high)
             break
     window.close()
     ser.close()

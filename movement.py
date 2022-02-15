@@ -8,17 +8,18 @@ import copy
 
 MORPHOVAL = 5
 DILATEVAL = 20
-def proc(frame_old,frame):
+def proc(frame_old,frame,mouse_low,mouse_high):
     f1 = copy.copy(frame_old)
     f2 = copy.copy(frame)
 
-    lower_mouse = np.array([0, 0, 0], dtype=np.uint8)
-    upper_mouse = np.array([255, 255, 30], dtype=np.uint8)
+    lower_mouse = np.array(mouse_low, dtype=np.uint8)
+    upper_mouse = np.array(mouse_high, dtype=np.uint8)
 
     lower_cable = np.array([0, 0, 0], dtype=np.uint8)
     upper_cable = np.array([0, 0, 0], dtype=np.uint8)
     def mousedetect(f):
         # マウスとケーブルを色によって領域判定
+        f = cv2.cvtColor(f,cv2.COLOR_BGR2HSV_FULL)
         f_mouse = cv2.inRange(f, lower_mouse, upper_mouse)
         f_cable = cv2.inRange(f, lower_cable, upper_cable)
         # OPEN/CLOSE処理によってノイズ除去

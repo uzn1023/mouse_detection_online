@@ -55,11 +55,14 @@ def setparam():
     capture = cv2.VideoCapture(CAMERA)
 
     DEVICE = devices[0]
-    ser = serial.Serial()
-    ser.port = str(DEVICE)
-    ser.bandrate = 9600
-    ser.setDTR(False)
-    ser.open()
+    try:
+        ser = serial.Serial()
+        ser.port = str(DEVICE)
+        ser.bandrate = 9600
+        ser.setDTR(False)
+        ser.open()
+    except:
+        serial.serialutil.SerialException
     outputval = 0
     frame_old = None
     while(1):

@@ -24,7 +24,7 @@ print("<<<MouseDetectionOnline>>>")
 print("Ver. 0.1 : 2022.02.15")
 print("")
 
-param = setparam.setparam() # パラメータ取得
+param = setparam.setparam() # パラメータ取得s
 CAMERA = param[0]
 ARDUINO = param[1]
 
@@ -200,6 +200,6 @@ while(True):
        window['overflow'].update("")
     else:
         interval = time.time() - starttime 
-        window['overflow'].update("Time Over Flow")
+        window['overflow'].update("Time Over")
 capture.release()
 cv2.destroyAllWindows()

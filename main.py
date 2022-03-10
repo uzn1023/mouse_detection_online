@@ -21,7 +21,7 @@ outflag = 1
 
 # 起動画面
 print("<<<MouseDetectionOnline>>>")
-print("Ver. 0.1 : 2022.02.15")
+print("Ver. 0.2 : 2022.03.10")
 print("")
 
 param = setparam.setparam() # パラメータ取得s

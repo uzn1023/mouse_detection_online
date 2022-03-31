@@ -8,6 +8,7 @@ import PySimpleGUI as sg
 import io
 import serial
 import setparam
+import pandas as pd
 
 SLEEPTIME = 0.2
 CAMERA = 0  # 使用するカメラの割り当て番号（端末に依存）
@@ -21,13 +22,16 @@ outflag = 1
 
 # 起動画面
 print("<<<MouseDetectionOnline>>>")
-print("Ver. 0.2 : 2022.03.10")
+print("Ver. 0.3 : 2022.03.31")
 print("")
 
-param = setparam.setparam() # パラメータ取得s
+param = setparam.setparam() # パラメータ取得
 CAMERA = param[0]
 ARDUINO = param[1]
 
+# 動画ファイル保存先
+vid_path = sg.popup_get_file('Where will you save video file?', save_as=True, file_types=(("Video Files", "*.mp4"),))
+csv_path = sg.popup_get_file('Where will you save csv file?', save_as=True, file_types=(("CSV Files", "*.csv"),))
 # カメラを設定
 capture = cv2.VideoCapture(CAMERA)
 initialtime = time.time()
@@ -35,6 +39,16 @@ times = np.empty(0)
 moves = np.empty(0)
 times2 = np.empty(0)
 maxvals = np.empty(0)
+
+# 動画ファイル保存用の設定
+fps = 5                    # カメラのFPSを取得
+w = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))              # カメラの横幅を取得
+h = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))             # カメラの縦幅を取得
+fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')         # 動画保存時のfourcc設定
+video = cv2.VideoWriter(vid_path, fourcc, fps, (w, h))      # 動画の仕様
+
+print(fps, w, h)
+
 # シリアルポート設定
 if ARDUINO != "None":
     ser = serial.Serial()
@@ -70,7 +84,7 @@ txt6 = sg.Text('Time Range', justification='center', size=(15, 1), background_co
 spn3 = sg.Spin([x*100 for x in range(100)], "", key='trange', font='Helvetica 12')
 txt7 = sg.Text('Movement Range', justification='center', size=(15, 1), background_color=bgcolor, text_color=txtcolor)
 spn4 = sg.Spin([x*1000 for x in range(100)], "", key='mrange', font='Helvetica 12')
-spn2 = sg.Spin([1,2,3,4,5,10,15,20,25,30], 5, key='FPS', font='Helvetica 12')
+spn2 = sg.Spin([5], 5, key='FPS', font='Helvetica 12', readonly=True)
 
 frame1 = sg.Frame("Output", layout = [[txt1, spn1], [txt2, txt3], [btn2, btn3]])
 frame2 = sg.Frame("Graph",layout = [[txt6, spn3, txt7, spn4],[img1]])
@@ -91,6 +105,8 @@ while(True):
     starttime = time.time()
     # カメラからフレーム取得
     ret, frame = capture.read()
+    # フレームを動画ファイルに保存
+    video.write(frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
     # 差分を取るためにひとつ前のフレームを保存
@@ -102,7 +118,7 @@ while(True):
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
         frame_old = copy.copy(frame)
-        
+
         # 画面上に移動量を記載
         txt = "Movement : " + str(dif_out) + " [px]"
         cv2.putText(f_out,
@@ -127,7 +143,7 @@ while(True):
                 times2 = np.append(times2, passtime)
                 maxvals = np.append(maxvals, values["outputmax"])
                 lines2.set_data(times2, maxvals)
-    
+
     # movement - time グラフ作成
     passtime = time.time() - initialtime
     if dif_out is not None:
@@ -156,20 +172,23 @@ while(True):
         plt.ylabel("Movement [px]")
     # GUI描画
     event, values = window.read(timeout=0)
-    
+
     ## 出力ON
-    if event == 'ON': 
+    if event == 'ON':
         window['ON'].update(disabled=True)
         window['OFF'].update(disabled=False)
         outflag = 1
-    if event == 'OFF': 
+    if event == 'OFF':
         window['ON'].update(disabled=False)
         window['OFF'].update(disabled=True)
         outflag = 0
     ## 終了ボタン
-    if event in ('Exit', None):     
+    if event in ('Exit', None):
+        data = np.stack([times, moves])
+        data_T = data.T
+        np.savetxt(csv_path, data_T, delimiter=",") 
         break
-    
+
     ## グラフの更新
     item = io.BytesIO()
     fig.savefig(item, format='png',dpi=graph_dpi)
@@ -181,7 +200,7 @@ while(True):
         _f_out = cv2.resize(_f_out, dsize=None, fx=0.75, fy=0.75)
         imgbytes = cv2.imencode('.png', _f_out)[1].tobytes()
         img_elem.update(data=imgbytes)
-    
+
     ## 出力値を表示
     if outputval is not None and outflag == 1:
         outputvol = (outputval / 255) * 5
@@ -202,4 +221,5 @@ while(True):
         interval = time.time() - starttime 
         window['overflow'].update("Time Over")
 capture.release()
+video.release()
 cv2.destroyAllWindows()

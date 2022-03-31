@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(['main.py'],
-             pathex=[],
+             pathex=['E:\\SSG_Share_1\\Uezono\\mouse_detection_online'],
              binaries=[],
              datas=[],
              hiddenimports=[],
